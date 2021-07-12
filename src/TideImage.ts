@@ -1,10 +1,9 @@
 import stream from 'stream';
 import jpeg from 'jpeg-js';
-//import {pure from 'pureimage';
+//import pure from 'pureimage';
 const pure = require('pureimage');
-
 import { TideData } from './TideData';
-import { createGzip } from 'zlib';
+
 const fontDir = __dirname + "/../fonts";
 
 export class TideImage {
@@ -20,19 +19,19 @@ export class TideImage {
         this.logger = logger;
     }
 
-    public async getImageStream(station: string) {
-        this.logger.info(`TideImage: request for ${station}`);
+    public async getImageStream(station: string, location: string, application: string) {
+        this.logger.info(`TideImage: request for ${location}, station: ${station}`);
 
-        const title = "Forecast for Onset, MA";
+        const title = `Tides at ${location}`;
         
         this.tideData = new TideData(this.logger);
 
         interface Prediction {
-            t: number;
-            v: number;
+            t: string;
+            v: string;
         }
 
-        const predictionsArray: Array<Prediction> = await  this.tideData.getTideData(station);
+        const predictionsArray: Array<Prediction> = await  this.tideData.getTideData(station, application);
 
         // {
         //     "predictions": [
@@ -53,41 +52,84 @@ export class TideImage {
             return null;
         }
 
+        // Get the min and max tide levels - we need this to figure out the scale below
+        let maxLevel: number = 0.0;
+        let minLevel: number = 0.0;
+
+        for (let prediction of predictionsArray) {
+            // this.logger.log(`Prediction: ${prediction}`);
+            // this.logger.log(`Level: ${prediction.v}, Time: ${prediction.t}`)
+            const tideLevel: number = parseFloat(prediction.v);
+
+            if (tideLevel > maxLevel)
+                maxLevel = tideLevel;
+
+            if (tideLevel < minLevel)
+                minLevel = tideLevel;
+        }
+
         const imageHeight: number = 1080; // 800;
         const imageWidth: number  = 1920; // 1280;
 
         // Screen origin is the upper left corner
         // Java Canvas: origin is upper left.  positive number to the right and down.
-        const  chartOriginX = 100;                    // In from the left edge
+        const  chartOriginX = 120;                    // In from the left edge
         const  chartOriginY = imageHeight - 70;       // Down from the top (Was: Up from the bottom edge)
 
-        const verticalGridLineCount = 24;    // Plus a line at 0, vertical line at each hour
-        let horizontalGridLineCount = 9;     // Plus a line at -1 and 0. horizontal line at each 1ft marker
-        const verticalGridLineSpacing = 70;  // 70 * 24 = 1680 pixels wide, should be a multiple of 10 since 10 data points/hour
-        let  horizontalGridSpacing = 100;    // 110 * 8 = 880 pixels tall
+        let horizontalGridLineCount: number;
+        let horizontalGridSpacing: number;
+        let gridStep: number = 1;
+        // Determine the grid count and grid size.  
+        //  - count * size ~= 900 to fit the space
+        //  - gridLineCount has one extra for negative tides of up to 1 ft.
+        //  - gridStep - how many feet per grid line and label
 
-        let   pixelsPerTideLevel = 110;      // Normally is 1ft is 100pts (could scale to 2ft is 100pts), Same as horizontalGridSpacing!
-        const pixelsPerDataPoint = 7;        // 7 pixels each prediction sample
-        const dataPointsPerHour  = 10;       // There are 10 predictions per hour, every 6 minutes.
-        const pixelsPerHour      = pixelsPerDataPoint * dataPointsPerHour;  // 70,  Same as verticalGridLineSpacing!
+        if (maxLevel <= 6) {
+            horizontalGridLineCount = 7;   // Support ranges to -1 ft. 
+            horizontalGridSpacing  = 128;  // 896
+            gridStep = 1;
+        } else if (maxLevel <= 12) {
+            horizontalGridLineCount = 14;  // Supports ranges to -2 ft.
+            horizontalGridSpacing  = 64;   // 896
+            gridStep = 2;
+        }else {
+            horizontalGridLineCount = 28;  // Supports ranges to -4 ft.
+            horizontalGridSpacing  = 32;   // 896
+            gridStep = 4;
+        }
 
-        // The chartWidth will be smaller than the imageWidth but must be a multiple of hoursToShow
-        // The chartHeight will be smaller than the imageHeight but must be a multiple of 100
-        const  chartWidth  = verticalGridLineCount   * verticalGridLineSpacing; // 24 * 70 = 1680
-        let  chartHeight = horizontalGridLineCount * horizontalGridSpacing;   // 8 * 110 = 880
+        const verticalGridLineCount: number = 24;    // Plus a line at 0, vertical line at each hour
+        const verticalGridLineSpacing: number = 70;  // 70 * 24 = 1680 pixels wide, should be a multiple of 10 since 10 data points/hour
+
+         // The chartWidth will be smaller than the imageWidth but must be a multiple of hoursToShow
+         const  chartWidth: number  = verticalGridLineCount   * verticalGridLineSpacing; // 24 * 70 = 1680
+         const  chartHeight: number = horizontalGridLineCount * horizontalGridSpacing;   // Around 900 
+
+        const verticalMajorGridLineCount: number = 2;  // 0, 12 and 24 hours
+        const verticalMajorGridSpacing: number = (verticalGridLineSpacing * 12);  // every 12 hours
         
+        const horizontalMajorGridLineCount: number = 1;
+        const horizontalMajorGridSpacing: number   = chartHeight;
 
-        // const topLegendLeftIndent = imageWidth - 300;
+        const pixelsPerTideLevel: number = horizontalGridSpacing;        // 
+        const pixelsPerDataPoint: number = verticalGridLineSpacing / 10; // 7 pixels if verticalGridLineSpacing is 70
+        const dataPointsPerHour: number  = 10;                           // There are 10 predictions points per hour, every 6 minutes.
+        const pixelsPerHour: number      = pixelsPerDataPoint * dataPointsPerHour;  // 70,  Same as verticalGridLineSpacing!
 
-        const backgroundColor: string     = 'rgb(240, 240, 255)';
-        const titleColor: string          = 'rgb(0,   0,   150)';
-        const gridLinesColor: string      = 'rgb(100, 100, 100)';
-        const majorGridLinesColor: string = 'rgb(150, 150, 150)';
-        const tideColor: string           = 'rgba(0,  50,   150, 0.7)';
+        const titleOffset: number = 80; // down from the top of the image
+        const horizontalLabelOffset: number = 50; // below the bottom of the chart
+        const verticalLabelOffset: number = 50; // left of the chart left edge
 
-        const largeFont: string  = "48px 'OpenSans-Bold'";   // Title
+        const backgroundColor: string     = 'rgb(240, 240,   255)';
+        const titleColor: string          = 'rgb(0,     0,   150)';
+        const gridLinesColor: string      = 'rgb(150, 150,   150)';
+        const majorGridLinesColor: string = 'rgb(50,   50,   50)';
+        const tideColor: string           = 'rgba(0,   100,   150, 0.7)';
+        const todayLineColor: string      = 'rgba(255,  0,     0, 0.7)';
+
+        const largeFont: string  = "60px 'OpenSans-Bold'";   // Title
         const mediumFont: string = "36px 'OpenSans-Bold'";   // axis labels
-        const smallFont: string  = "24px 'OpenSans-Bold'";   // Legend at the top
+        const smallFont: string  = "24px 'OpenSans-Bold'";   
 
         const fntBold     = pure.registerFont(fontDir + '/OpenSans-Bold.ttf','OpenSans-Bold');
         const fntRegular  = pure.registerFont(fontDir + '/OpenSans-Regular.ttf','OpenSans-Regular');
@@ -98,62 +140,12 @@ export class TideImage {
         fntRegular2.loadSync();
 
         const thinStroke: number = 1;
-        const regularStroke: number = 3;
-        const heavyStroke: number = 5;
-
-        
-
-        // Get the min and max tide levels
-        let maxLevel = 0.0;
-        let minLevel = 0.0;
-
-        for (let prediction of predictionsArray) {
-            // this.logger.log(`Prediction: ${prediction}`);
-            // this.logger.log(`Level: ${prediction.v}, Time: ${prediction.t}`)
-            const tideLevel = prediction.v;
-
-            if (tideLevel > maxLevel)
-                maxLevel = tideLevel;
-
-            if (tideLevel < minLevel)
-                minLevel = tideLevel;
-        }
-
-        if (maxLevel < 8) {
-            horizontalGridLineCount = 9;  // Default form above <-- fix for 
-            horizontalGridSpacing  = 100; // default from above,  Chart
-        } else if (maxLevel < 12) {
-            horizontalGridLineCount = 12;
-            horizontalGridSpacing  = 50; // 650
-        } else if (maxLevel < 16) {
-            horizontalGridLineCount = 17;
-            horizontalGridSpacing  = 38; // 646
-        } else if (maxLevel < 20) {
-            horizontalGridLineCount = 21;
-            horizontalGridSpacing  = 30; // 630
-        } else if (maxLevel < 28) {
-            horizontalGridLineCount = 29;
-            horizontalGridSpacing  = 22; // 638
-        } else {
-            horizontalGridLineCount = 41;
-            horizontalGridSpacing  = 16; // 656
-        }
-
-        chartHeight = horizontalGridLineCount * horizontalGridSpacing; 
-
-        this.logger.log(`MaxLevel: ${maxLevel}, Horizontal Grid Spacing: ${horizontalGridSpacing}, count ${horizontalGridLineCount}`)
+        const regularStroke: number = 2;
+        const heavyStroke: number = 8;
+        const veryHeavyStroke: number = 20;
 
         const img = pure.make(imageWidth, imageHeight);
         const ctx = img.getContext('2d');
-
-        // Canvas reference
-        // origin is upper right
-        // coordinates are x, y, width, height in that order
-        // to set a color: ctx.fillStyle = 'rgb(255, 255, 0)'
-        //                 ctx.fillStyle = 'Red'
-        //                 ctx.setFillColor(r, g, b, a);
-        //                 ctx.strokeStyle = 'rgb(100, 100, 100)';
-
 
         // Fill the bitmap
         ctx.fillStyle = backgroundColor;
@@ -163,29 +155,19 @@ export class TideImage {
         ctx.fillStyle = titleColor;
         ctx.font = largeFont;
         const textWidth: number = ctx.measureText(title).width;
-        ctx.fillText(title, (imageWidth - textWidth) / 2, 60);
-
+        ctx.fillText(title, (imageWidth - textWidth) / 2, titleOffset);
 
         // Draw the labels on the Y axis
-        //p.setStrokeWidth(1f);
-        //p.setTextSize(24);
-        // canvas.drawText(timeStr, 512 - bounds.width()/2, 300, p);
-
-        // Label every foot unless there are more than 20 ft, then label every other one
-        let labelStep = 1;
-        if (horizontalGridSpacing < 32)
-            labelStep = 2;
-
-        // canvas.drawText(Integer.toString(-1), originX - 50, originY + 10 - (0 * horizontalGridSpacing), p);
-        // for (int i = 0; i < horizontalridLineCount; i += labelStep) {
-        //     canvas.drawText(Integer.toString(i), originX - 50, originY + 10 - ((i + 1) * horizontalGridSpacing), p);
-        // }
-
-
+        ctx.font = mediumFont;
         
+        for (let i = 0; i < horizontalGridLineCount; i += gridStep) {
+            ctx.fillText(`${i}`, chartOriginX - verticalLabelOffset, chartOriginY + 10 - ((i + gridStep) * horizontalGridSpacing));
+        }
+
         // Draw the labels on the X axis
-        for (let hour = 0; hour <= 24; hour += 3) {
-            let label;
+        ctx.font = mediumFont;
+        for (let hour: number = 0; hour <= 24; hour += 3) {
+            let label: string;
             if (hour == 0 || hour == 24) {
                 label = "12 AM";
             } else if (hour > 12) {
@@ -195,18 +177,17 @@ export class TideImage {
             }
 
             const textWidth: number = ctx.measureText(label).width;
-            ctx.fillText(label, (chartOriginX + (hour * verticalGridLineSpacing)) - textWidth/2, chartOriginY + 60);
-
+            ctx.fillText(label, (chartOriginX + (hour * verticalGridLineSpacing)) - textWidth/2, chartOriginY + horizontalLabelOffset);
         }
 
         // Draw the regular vertical lines
         ctx.strokeStyle = gridLinesColor;
         ctx.lineWidth = regularStroke;
         for (let i: number = 0; i <= verticalGridLineCount; i++) {
-            const startX = chartOriginX + (i * verticalGridLineSpacing);
-            const endX = chartOriginX + (i * verticalGridLineSpacing);
-            const startY = chartOriginY;
-            const endY = chartOriginY - (chartHeight);
+            const startX: number = chartOriginX + (i * verticalGridLineSpacing);
+            const endX: number = chartOriginX + (i * verticalGridLineSpacing);
+            const startY: number = chartOriginY;
+            const endY: number = chartOriginY - (chartHeight + 1); // fill in the last pixel at the top
 
             ctx.beginPath();
             ctx.moveTo(startX, startY);
@@ -214,15 +195,13 @@ export class TideImage {
             ctx.stroke();
         }
 
-        const verticalMajorGridLineCount = 2;  // 0, 12 and 24 hours
-        const verticalMajorGridSpacing = (verticalGridLineSpacing * 12);  // every 12 hours
         // Draw the major vertical lines
         ctx.strokeStyle = majorGridLinesColor;
         ctx.lineWidth = heavyStroke;
-        for (let i: number = 0; i <= verticalMajorGridLineCount; i ++) {
-            const startX = chartOriginX + (i * verticalMajorGridSpacing);
+        for (let i: number = 0; i <= verticalMajorGridLineCount; i++) {
+            const startX: number = chartOriginX + (i * verticalMajorGridSpacing);
             const endX   = chartOriginX + (i * verticalMajorGridSpacing);
-            const startY = chartOriginY;
+            const startY: number = chartOriginY;
             const endY   = chartOriginY - (chartHeight);
 
             ctx.beginPath();
@@ -231,15 +210,13 @@ export class TideImage {
             ctx.stroke();
         }
 
-
- 
         // Draw the horizontal grid lines 
         ctx.strokeStyle = gridLinesColor;
         ctx.lineWidth = regularStroke;
-        for (let i: number = 0; i <= horizontalGridLineCount; i++) {
-            const startX = chartOriginX;
+        for (let i: number = 0; i <= horizontalGridLineCount; i += gridStep) {
+            const startX: number = chartOriginX;
             const endX   = chartOriginX + chartWidth;
-            const startY = chartOriginY - (i * horizontalGridSpacing);
+            const startY: number = chartOriginY - (i * horizontalGridSpacing);
             const endY   = chartOriginY - (i * horizontalGridSpacing);
 
             ctx.beginPath();
@@ -249,14 +226,12 @@ export class TideImage {
         }
 
         // Draw the major horizontal lines
-        const horizontalMajorGridLineCount = 1;
-        const horizontalMajorGridSpacing = chartHeight;
         ctx.strokeStyle = majorGridLinesColor;
         ctx.lineWidth = heavyStroke;
         for (let i: number = 0; i <= horizontalMajorGridLineCount; i++) {
-            const startX = chartOriginX;
+            const startX: number = chartOriginX;
             const endX   = chartOriginX + chartWidth;
-            const startY = chartOriginY - (i * horizontalMajorGridSpacing);
+            const startY: number = chartOriginY - (i * horizontalMajorGridSpacing);
             const endY   = chartOriginY - (i * horizontalMajorGridSpacing);
 
             ctx.beginPath();
@@ -265,55 +240,48 @@ export class TideImage {
             ctx.stroke();
         }
 
-
         // Draw the water level area
-        // Set alpha 
 
         // Start at chart origin
         ctx.fillStyle = tideColor;
         ctx.beginPath();
         ctx.moveTo(chartOriginX, chartOriginY);
-        
-        // drawto each data point
-        let x = chartOriginX;
-        for (let prediction of predictionsArray) {
-            //this.logger.log(`Prediction: ${prediction}`);
-            //this.logger.log(`Level: ${prediction.v}, Time: ${prediction.t}`)
 
-            ctx.lineTo(x, chartOriginY - (prediction.v * pixelsPerTideLevel) );
-            x += pixelsPerDataPoint;
+        let x: number = 0;
+        let y: number = 0;
+        for (let i: number = 0; i < predictionsArray.length; i++) {
+            x = i * pixelsPerDataPoint;
+            y = ((parseFloat(predictionsArray[i].v) + 1) * pixelsPerTideLevel);
+
+            ctx.lineTo(chartOriginX + x, chartOriginY - y);
         }
+        // Add one more point at the end to bring us up to the right grid line
+        x += pixelsPerDataPoint;
+        ctx.lineTo(chartOriginX + x, chartOriginY - y);
 
+        // Close off the bottom of the region and back to the chart origin and then fill
         ctx.lineTo(chartOriginX + chartWidth, chartOriginY);
         ctx.lineTo(chartOriginX, chartOriginY);
         ctx.fill();
 
-        
+        // Draw the line at the current time
+        const now = new Date();
+        const minutesToday: number = now.getHours() * 60 + now.getMinutes();
 
+        ctx.strokeStyle = todayLineColor;
+        ctx.lineWidth = veryHeavyStroke;
+        ctx.beginPath();
+        ctx.moveTo(chartOriginX + (minutesToday * pixelsPerHour)/ 60, chartOriginY);
+        ctx.lineTo(chartOriginX + (minutesToday * pixelsPerHour)/ 60, chartOriginY - chartHeight);
+        ctx.stroke();
 
-        // // Draw the line at the current time
-        // Calendar rightNow = Calendar.getInstance();
-        // int hour = rightNow.get(Calendar.HOUR_OF_DAY);
-        // int minute = rightNow.get(Calendar.MINUTE);
+        // Finish up and save the image
+        const expires: Date = new Date();
+        expires.setMinutes(expires.getMinutes() + 30);
 
-        // p.setStrokeWidth(4f);
-        // p.setColor(Color.RED);
-        // int timeX = originX + (Line * (hour * 60 + minute))/60;
-        // canvas.drawLine(timeX, originY, timeX, originY - (horizontalridLineCount * horizontalGridSpacing), p);
+        const jpegImg: jpeg.BufferRet = await jpeg.encode(img, 50);
 
-        // Date now = new Date();
-        // String timeStr = new SimpleDateFormat("h:mm a").format(now);
-        // //p.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
-        // p.setColor(Color.argb(255, 0,0,255));
-        // p.setTextSize(32);
-        // //canvas.drawText(timeStr, width - 180, height - 20, p);
-
-        const expires = new Date();
-        expires.setHours(expires.getHours() + 2);
-
-        const jpegImg = await jpeg.encode(img, 50);
-
-        const jpegStream = new stream.Readable({
+        const jpegStream: stream = new stream.Readable({
             read() {
                 this.push(jpegImg.data);
                 this.push(null);
