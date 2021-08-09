@@ -1,7 +1,7 @@
 import axios, { AxiosResponse } from "axios";
 import dateformat from "dateformat";
-import { Logger as LoggerInterface } from "./Logger";
-import { Kache as KacheInterface } from "./Kache";
+import { LoggerInterface } from "./Logger";
+import { KacheInterface } from "./Kache";
 
 export interface Prediction {
     t: string;
