@@ -37,7 +37,7 @@ export class TideData {
         let tideJson: Array<Prediction> | null = this.cache.get(station) as Array<Prediction>;
         if (tideJson === null) {
             try {
-                this.logger.verbose("getTideData: Fetching today's tide data");
+                //this.logger.verbose("getTideData: Fetching today's tide data");
                 const response: AxiosResponse = await axios.get(url, {headers: {"Content-Encoding": "gzip"}});
                 tideJson = response.data.predictions;
 

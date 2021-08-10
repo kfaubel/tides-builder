@@ -1,6 +1,11 @@
-// Not sure why this is needed.
-// Seems like the CanalCurrentImge.d.ts next to the CanalCurrentImage.js file should be enough...
 declare module "tide-builder";
+
+export interface TideStation {
+    station: string;        // "8447270";
+    fileName: string;       // "onset-tides.jpg";
+    location: string;       // "Onset, MA";
+    application: string;    // "ken@faubel.org";
+}
 
 export interface LoggerInterface {
     error(text: string): void;

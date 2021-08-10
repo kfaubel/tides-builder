@@ -5,6 +5,13 @@ import { TideImage } from "./TideImage";
 import { KacheInterface } from "./Kache";
 import { ImageWriterInterface } from "./SimpleImageWriter";
 
+export interface TideStation {
+    station: string;        // "8447270";
+    fileName: string;       // "onset-tides.jpg";
+    location: string;       // "Onset, MA";
+    application: string;    // "ken@faubel.org";
+}
+
 export class TideBuilder {
     private logger: LoggerInterface;
     private cache: KacheInterface;
@@ -16,17 +23,15 @@ export class TideBuilder {
         this.writer = writer;
     }
 
-    // I would prefer to use the interface commented out above but it does not work direclty.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    public async CreateImages(station: string, fileName: string, location: string, application: string): Promise<boolean>{
+    public async CreateImages(tideStation: TideStation): Promise<boolean>{
         try {
             const tideImage: TideImage = new TideImage(this.logger, this.cache);
 
-            const result = await tideImage.getImage(station, location, application);
+            const result = await tideImage.getImage(tideStation.station, tideStation.location, tideStation.application);
 
             if (result !== null && result.imageData !== null ) {
-                this.logger.info(`CreateImages: Writing: ${fileName}`);
-                this.writer.saveFile(fileName, result.imageData.data);
+                this.logger.info(`CreateImages: Writing: ${tideStation.fileName}`);
+                this.writer.saveFile(tideStation.fileName, result.imageData.data);
             } else {
                 this.logger.error("CreateImages: No imageData returned from TideImage.getImage()");
                 return false;

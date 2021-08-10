@@ -2,6 +2,7 @@
 import path from "path";
 import jpeg from "jpeg-js";
 import * as pure from "pureimage";
+import dateFormat from "dateformat";
 import { TideData } from "./TideData";
 import { LoggerInterface } from "./Logger";
 import { KacheInterface} from "./Kache";
@@ -99,20 +100,21 @@ export class TideImage {
         const  chartWidth: number                = verticalGridLineCount   * verticalGridLineSpacing; // 24 * 70 = 1680
         const  chartHeight: number               = horizontalGridLineCount * horizontalGridSpacing;   // Around 900 
 
-        const verticalMajorGridLineCount         = 2;  // 0, 12 and 24 hours
-        const verticalMajorGridSpacing: number   = (verticalGridLineSpacing * 12);  // every 12 hours
+        const verticalMajorGridLineCount         = 2;                                      // 0, 12 and 24 hours
+        const verticalMajorGridSpacing: number   = (verticalGridLineSpacing * 12);         // every 12 hours
         
         const horizontalMajorGridLineCount       = 1;
         const horizontalMajorGridSpacing: number = chartHeight;
 
-        const pixelsPerTideLevel: number         = horizontalGridSpacing;        // 
-        const pixelsPerDataPoint: number         = verticalGridLineSpacing / 10; // 7 pixels if verticalGridLineSpacing is 70
-        const dataPointsPerHour                  = 10;                           // There are 10 predictions points per hour, every 6 minutes.
+        const pixelsPerTideLevel: number         = horizontalGridSpacing;        
+        const pixelsPerDataPoint: number         = verticalGridLineSpacing / 10;           // 7 pixels if verticalGridLineSpacing is 70
+        const dataPointsPerHour                  = 10;                                      // There are 10 predictions points per hour, every 6 minutes.
         const pixelsPerHour: number              = pixelsPerDataPoint * dataPointsPerHour;  // 70,  Same as verticalGridLineSpacing!
 
-        const titleOffset                        = 80; // down from the top of the image
-        const horizontalLabelOffset              = 50; // below the bottom of the chart
-        const verticalLabelOffset                = 50; // left of the chart left edge
+        const titleOffset                        = 80;                                      // down from the top of the image
+        const dateX                              = 1520;                                    // Draw the date on the left hand side
+        const horizontalLabelOffset              = 50;                                      // below the bottom of the chart
+        const verticalLabelOffset                = 50;                                      // left of the chart left edge
 
         const backgroundColor     = "rgb(240, 240,   255)";
         const titleColor          = "rgb(0,     0,   150)";
@@ -151,6 +153,11 @@ export class TideImage {
         ctx.font = largeFont;
         const textWidth: number = ctx.measureText(title).width;
         ctx.fillText(title, (imageWidth - textWidth) / 2, titleOffset);
+
+        // Draw the date in the upper left
+        const dataDate = new Date(predictionsArray[0].t);
+        ctx.font = mediumFont;
+        ctx.fillText(dateFormat(dataDate, "mmm dS, yyyy"), dateX, titleOffset);
 
         // Draw the labels on the Y axis
         ctx.font = mediumFont;
