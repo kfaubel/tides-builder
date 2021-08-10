@@ -27,5 +27,5 @@ export interface ImageWriterInterface {
 
 export declare class TideBuilder {
     constructor(logger: LoggerInterface, cache: KacheInterface, writer: ImageWriterInterface): void;
-    CreateImages(station: string, fileName: string, location: string, application: string): Promise<boolean>
+    CreateImages(tideStation: TideStation): Promise<boolean>
 }
