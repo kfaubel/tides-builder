@@ -139,7 +139,7 @@ export class TideImage {
         const thinStroke = 1;
         const regularStroke = 2;
         const heavyStroke = 8;
-        const veryHeavyStroke = 20;
+        const veryHeavyStroke = 15;
 
         const img = pure.make(imageWidth, imageHeight);
         const ctx = img.getContext("2d");
@@ -281,7 +281,7 @@ export class TideImage {
         const expires: Date = new Date();
         expires.setMinutes(expires.getMinutes() + 30);
 
-        const jpegImg: jpeg.BufferRet = jpeg.encode(img, 50);
+        const jpegImg: jpeg.BufferRet = jpeg.encode(img, 80);
         
         return {
             imageData: jpegImg,
