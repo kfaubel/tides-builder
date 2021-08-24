@@ -24,7 +24,7 @@ export class TideImage {
         this.tideData = new TideData(this.logger, this.cache);
     }
 
-    public async getImage(station: string, location: string, application: string): Promise<ImageResult | null> {
+    public async getImage(station: string, location: string, timeZone: string, application: string): Promise<ImageResult | null> {
         this.logger.info(`TideImage: request for ${location}, station: ${station}`);
 
         const title = `Tides at ${location}`;
@@ -34,7 +34,7 @@ export class TideImage {
             v: string;
         }
 
-        const predictionsArray: Array<Prediction> | null = await  this.tideData.getTideData(station, application);
+        const predictionsArray: Array<Prediction> | null = await  this.tideData.getTideData(station, timeZone, application);
 
         // {
         //     "predictions": [
@@ -268,7 +268,9 @@ export class TideImage {
 
         // Draw the line at the current time
         const now = new Date();
-        const minutesToday: number = now.getHours() * 60 + now.getMinutes();
+        const localTimeParts = now.toLocaleString("en-US", { timeZone: timeZone }).split(" "); //  ["8/23/2021", "8:00:00", "PM"]
+        const timeParts: string[] = localTimeParts[1].split(":"); // ["8", "00", "00"]
+        const minutesToday: number = +timeParts[0] * 60 + +timeParts[1];
 
         ctx.strokeStyle = todayLineColor;
         ctx.lineWidth = veryHeavyStroke;

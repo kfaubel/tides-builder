@@ -9,6 +9,7 @@ export interface TideStation {
     station: string;        // "8447270";
     fileName: string;       // "onset-tides.jpg";
     location: string;       // "Onset, MA";
+    timeZone: string;       // "America/New_York"
     application: string;    // "ken@faubel.org";
 }
 
@@ -27,7 +28,7 @@ export class TideBuilder {
         try {
             const tideImage: TideImage = new TideImage(this.logger, this.cache);
 
-            const result = await tideImage.getImage(tideStation.station, tideStation.location, tideStation.application);
+            const result = await tideImage.getImage(tideStation.station, tideStation.location, tideStation.timeZone, tideStation.application);
 
             if (result !== null && result.imageData !== null ) {
                 this.logger.info(`CreateImages: Writing: ${tideStation.fileName}`);

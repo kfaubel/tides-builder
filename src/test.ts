@@ -13,6 +13,7 @@ async function run() {
         station: "8447270",
         fileName: "onset-tides.jpg",
         location: "Onset, MA",
+        timeZone: "America/New_York",
         application: "ken@faubel.org",
     };
 
