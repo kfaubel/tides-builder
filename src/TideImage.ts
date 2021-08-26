@@ -8,7 +8,6 @@ import { LoggerInterface } from "./Logger";
 import { KacheInterface} from "./Kache";
 
 export interface ImageResult {
-    expires: string;
     imageType: string;
     imageData: jpeg.BufferRet | null;
 }
@@ -22,6 +21,24 @@ export class TideImage {
         this.logger = logger;
         this.cache = cache;
         this.tideData = new TideData(this.logger, this.cache);
+    }
+
+    // This optimized fillRect was derived from the pureimage source code: https://github.com/joshmarinacci/node-pureimage/tree/master/src
+    // To fill a 1920x1080 image on a core i5, this saves about 1.5 seconds
+    // x, y       - position of the rect
+    // w, h       - size of the rect
+    // iw         - width of the image being written into, needed to calculate index into the buffer
+    // r, g, b, a - values to draw
+    private myFillRect(image: Buffer, x: number, y: number, w: number, h: number, iw: number, r: number, g: number, b: number, a: number) {
+        for(let i = y; i < y + h; i++) {                
+            for(let j = x; j < x + w; j++) {   
+                const index = (i * iw + j) * 4;     
+                image[index + 0] = r; 
+                image[index + 1] = g; 
+                image[index + 2] = b; 
+                image[index + 3] = a; 
+            }
+        }
     }
 
     public async getImage(station: string, location: string, timeZone: string, application: string): Promise<ImageResult | null> {
@@ -147,6 +164,7 @@ export class TideImage {
         // Fill the bitmap
         ctx.fillStyle = backgroundColor;
         ctx.fillRect(0, 0, imageWidth, imageHeight);
+        this.myFillRect(img.data, 0, 0, imageWidth, imageHeight, imageWidth, 0xE0, 0xE0, 0xFF, 0);
 
         // Draw the title
         ctx.fillStyle = titleColor;
@@ -273,22 +291,17 @@ export class TideImage {
         const minutesToday: number = +timeParts[0] * 60 + +timeParts[1];
 
         ctx.strokeStyle = todayLineColor;
-        ctx.lineWidth = veryHeavyStroke;
+        ctx.lineWidth = heavyStroke;
         ctx.beginPath();
         ctx.moveTo(chartOriginX + (minutesToday * pixelsPerHour)/ 60, chartOriginY);
         ctx.lineTo(chartOriginX + (minutesToday * pixelsPerHour)/ 60, chartOriginY - chartHeight);
         ctx.stroke();
 
-        // Finish up and save the image
-        const expires: Date = new Date();
-        expires.setMinutes(expires.getMinutes() + 30);
-
         const jpegImg: jpeg.BufferRet = jpeg.encode(img, 80);
         
         return {
             imageData: jpegImg,
-            imageType: "jpg",
-            expires: expires.toUTCString()
+            imageType: "jpg"
         };
     }
 }
