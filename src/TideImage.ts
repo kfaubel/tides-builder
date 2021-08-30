@@ -284,11 +284,14 @@ export class TideImage {
         ctx.lineTo(chartOriginX, chartOriginY);
         ctx.fill();
 
-        // Draw the line at the current time
+        // Draw the line at the current time based on the timeZone the station is in
+        // Local en-GB gives us 24 hours times
+        // Split on space, take the second element, split on ':'
         const now = new Date();
-        const localTimeParts = now.toLocaleString("en-US", { timeZone: timeZone }).split(" "); //  ["8/23/2021", "8:00:00", "PM"]
-        const timeParts: string[] = localTimeParts[1].split(":"); // ["8", "00", "00"]
-        const minutesToday: number = +timeParts[0] * 60 + +timeParts[1];
+        const localTimeParts = now.toLocaleString("en-GB", { timeZone: timeZone }).split(" ")[1].split(":"); 
+        const minutesToday: number = +localTimeParts[0] * 60 + +localTimeParts[1];
+
+        this.logger.log(`Time at ${timeZone} ${now.toLocaleString("en-GB", { timeZone: timeZone })}, minToday: ${minutesToday}`);
 
         ctx.strokeStyle = todayLineColor;
         ctx.lineWidth = heavyStroke;
