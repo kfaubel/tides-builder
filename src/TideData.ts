@@ -1,5 +1,6 @@
 import axios, { AxiosResponse } from "axios";
 import dateformat from "dateformat";
+import moment from "moment-timezone";
 import { LoggerInterface } from "./Logger";
 import { KacheInterface } from "./Kache";
 
@@ -18,30 +19,20 @@ export class TideData {
         this.cache = cache;
     }    
 
-    // Get the "yyyymmdd" for the given timezone
-    private getLocalTime(now: Date, timeZone: string): string {
-        const localTimezone = now.toLocaleString("en-US", { timeZone: timeZone }).split(" ");
-        
-        const dateArray: string[] = localTimezone[0].split("/");
-        const mon  = +dateArray[0];  // Leading + is a shortcut for converting a string to a number, who knew?
-        const day  = +dateArray[1];
-        const year = +dateArray[2].slice(0,4); // remove trailing comma
-        
-        const dayStr = (day < 10)   ? `${0}${day}`   : `${day}`; 
-        const monStr = (mon < 10) ? `${0}${mon}` : `${mon}`; 
-        
-        return `${year}${monStr}${dayStr}`;
-    }
-
+    /**
+     * 
+     * @param station - NOAA station id
+     * @param timeZone e.g.: "America/New_York"
+     * @param application - idnetifier for the REST call to NOAA
+     * @returns 
+     */
     public async getTideData(station: string, timeZone: string, application: string): Promise<Array<Prediction> | null> {
-        const now = new Date();
-        
-        const todayStr = this.getLocalTime(now, timeZone);
-        const beginDateStr = dateformat(now, `${todayStr}%2000:00`);
-        const endDateStr = dateformat(now, `${todayStr}%2023:54`);
+        const now: moment.Moment = moment();
+        const beginDateStr = now.tz(timeZone).format("YYYYMMDD%2000:00");
+        const endDateStr   = now.tz(timeZone).format("YYYYMMDD%2023:54");
 
         const url = `https://tidesandcurrents.noaa.gov/api/datagetter?begin_date=${beginDateStr}&end_date=${endDateStr}&station=${station}&product=predictions&datum=MLLW&units=english&time_zone=lst_ldt&application=${application}&format=json`;
-        // this.logger.log(url);
+        this.logger.log(url);
 
         // {
         //     "predictions": [
@@ -55,14 +46,15 @@ export class TideData {
         if (tideJson === null) {
             try {
                 //this.logger.verbose("getTideData: Fetching today's tide data");
-                const response: AxiosResponse = await axios.get(url, {headers: {"Content-Encoding": "gzip"}});
+                const response: AxiosResponse = await axios.get(url, {headers: {"Content-Encoding": "gzip"}, timeout: 2000});
                 tideJson = response.data.predictions;
 
                 if (tideJson !== undefined) {
-                    const midnightTonight: Date = new Date();
-                    midnightTonight.setHours(23,59,59,0);
+                    // create a date in the specified timezone for the end of day
+                    const midnightTonight = moment().tz(timeZone).endOf("day");
 
-                    this.cache.set(station, tideJson, midnightTonight.getTime() );
+                    // Key: station, Value: tideJson, expiration (seconds)
+                    this.cache.set(station, tideJson, midnightTonight.valueOf() );
                 } else {
                     tideJson = null;
                 }

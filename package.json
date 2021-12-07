@@ -19,6 +19,8 @@
     "axios": "^0.21.0",
     "dateformat": "^4.5.1",
     "jpeg-js": "^0.4.2",
+    "moment": "^2.29.1",
+    "moment-timezone": "^0.5.34",
     "pureimage": "^0.3.5"
   },
   "devDependencies": {
