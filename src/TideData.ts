@@ -1,6 +1,5 @@
 import axios, { AxiosResponse } from "axios";
-import dateformat from "dateformat";
-import moment from "moment-timezone";
+import moment from "moment-timezone";  // https://momentjs.com/timezone/docs/ &  https://momentjs.com/docs/
 import { LoggerInterface } from "./Logger";
 import { KacheInterface } from "./Kache";
 
@@ -32,7 +31,7 @@ export class TideData {
         const endDateStr   = now.tz(timeZone).format("YYYYMMDD%2023:54");
 
         const url = `https://tidesandcurrents.noaa.gov/api/datagetter?begin_date=${beginDateStr}&end_date=${endDateStr}&station=${station}&product=predictions&datum=MLLW&units=english&time_zone=lst_ldt&application=${application}&format=json`;
-        this.logger.log(url);
+        this.logger.verbose(url);
 
         // {
         //     "predictions": [
