@@ -37,8 +37,9 @@ export class TideBuilder {
                 this.logger.error("CreateImages: No imageData returned from TideImage.getImage()");
                 return false;
             }
-        } catch (e) {
+        } catch (e: any) {
             this.logger.error(`CreateImages: Exception: ${e}`);
+            this.logger.error(`CreateImages: Exception: ${e.stack}`);
             return false;
         }
 

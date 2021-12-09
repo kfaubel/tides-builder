@@ -27,6 +27,8 @@ export class TideData {
      */
     public async getTideData(station: string, timeZone: string, application: string): Promise<Array<Prediction> | null> {
         const now: moment.Moment = moment();
+        this.logger.info(`getTideData: timeZone: ${timeZone}`);
+        this.logger.info(`getTideData: now: ${now.tz(timeZone)}`);
         const beginDateStr = now.tz(timeZone).format("YYYYMMDD%2000:00");
         const endDateStr   = now.tz(timeZone).format("YYYYMMDD%2023:54");
 
