@@ -19,21 +19,16 @@ export class TideData {
     }    
 
     /**
-     * 
+     * Builds a URL and fetches tide data.
      * @param station - NOAA station id
      * @param timeZone e.g.: "America/New_York"
      * @param application - idnetifier for the REST call to NOAA
-     * @returns 
+     * @returns Array of Predicitons data {t: <time>, v: <height>} for every 6 minute for the current day in timeZone
      */
     public async getTideData(station: string, timeZone: string, application: string): Promise<Array<Prediction> | null> {
         const now: moment.Moment = moment();
-        this.logger.info(`getTideData: timeZone: ${timeZone}`);
-        this.logger.info(`getTideData: now: ${now.tz(timeZone)}`);
         const beginDateStr = now.tz(timeZone).format("YYYYMMDD%2000:00");
         const endDateStr   = now.tz(timeZone).format("YYYYMMDD%2023:54");
-
-        const url = `https://tidesandcurrents.noaa.gov/api/datagetter?begin_date=${beginDateStr}&end_date=${endDateStr}&station=${station}&product=predictions&datum=MLLW&units=english&time_zone=lst_ldt&application=${application}&format=json`;
-        this.logger.verbose(url);
 
         // {
         //     "predictions": [
@@ -45,9 +40,14 @@ export class TideData {
 
         let tideJson: Array<Prediction> | null = this.cache.get(station) as Array<Prediction>;
         if (tideJson === null) {
+            const url = `https://tidesandcurrents.noaa.gov/api/datagetter?begin_date=${beginDateStr}&end_date=${endDateStr}&station=${station}&product=predictions&datum=MLLW&units=english&time_zone=lst_ldt&application=${application}&format=json`;
+            this.logger.verbose(url);
+            
             try {
+                
+
                 //this.logger.verbose("getTideData: Fetching today's tide data");
-                const response: AxiosResponse = await axios.get(url, {headers: {"Content-Encoding": "gzip"}, timeout: 2000});
+                const response: AxiosResponse = await axios.get(url, {headers: {"Content-Encoding": "gzip"}, timeout: 5000});
                 tideJson = response.data.predictions;
 
                 if (tideJson !== undefined) {
@@ -61,7 +61,8 @@ export class TideData {
                 }
                 
             } catch(e) {
-                this.logger.error(`TideData: Error getting time data: ${e}`);
+                this.logger.error(`TideData: Error getting tide data: ${e}`);
+                this.logger.error(`TideData URL: ${url}`);
                 tideJson = null;
             }
         }

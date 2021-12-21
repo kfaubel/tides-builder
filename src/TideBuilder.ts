@@ -34,12 +34,16 @@ export class TideBuilder {
                 this.logger.info(`CreateImages: Writing: ${tideStation.fileName}`);
                 this.writer.saveFile(tideStation.fileName, result.imageData.data);
             } else {
-                this.logger.error("CreateImages: No imageData returned from TideImage.getImage()");
+                this.logger.error("CreateImages: No image returned from TideImage.getImage()");
                 return false;
             }
-        } catch (e: any) {
-            this.logger.error(`CreateImages: Exception: ${e}`);
-            this.logger.error(`CreateImages: Exception: ${e.stack}`);
+        } catch(e) {
+            if (e instanceof Error) {
+                this.logger.error(`CreateImages: Exception: : ${e.message}`);
+                this.logger.error(`${e.stack}`);
+            } else {
+                this.logger.error(`CreateImages: Exception: : ${e}`);
+            }
             return false;
         }
 

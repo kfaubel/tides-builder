@@ -62,7 +62,7 @@ export class TideImage {
         // }
 
         if (predictionsArray === null) {
-            this.logger.warn("TideImage: Failed to get data, no image available.\n");
+            this.logger.warn("TideImage: Failed to get data, can't create an image.\n");
             return null;
         }
 
@@ -165,7 +165,7 @@ export class TideImage {
 
         // Fill the bitmap
         ctx.fillStyle = backgroundColor;
-        ctx.fillRect(0, 0, imageWidth, imageHeight);
+        //ctx.fillRect(0, 0, imageWidth, imageHeight);
         this.myFillRect(img.data, 0, 0, imageWidth, imageHeight, imageWidth, 0xE0, 0xE0, 0xFF, 0);
 
         // Draw the title
@@ -292,8 +292,6 @@ export class TideImage {
         const now = new Date();
         const localTimeParts = now.toLocaleString("en-GB", { timeZone: timeZone }).split(" ")[1].split(":"); 
         const minutesToday: number = +localTimeParts[0] * 60 + +localTimeParts[1];
-
-        this.logger.log(`Time at ${timeZone} ${now.toLocaleString("en-GB", { timeZone: timeZone })}, minToday: ${minutesToday}`);
 
         ctx.strokeStyle = todayLineColor;
         ctx.lineWidth = heavyStroke;
