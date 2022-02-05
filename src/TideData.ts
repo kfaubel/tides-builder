@@ -2,6 +2,8 @@ import axios, { AxiosResponse } from "axios";
 import moment from "moment-timezone";  // https://momentjs.com/timezone/docs/ &  https://momentjs.com/docs/
 import { LoggerInterface } from "./Logger";
 import { KacheInterface } from "./Kache";
+import { AxiosRequestConfig } from "axios";
+import { AxiosError } from "axios";
 
 export interface Prediction {
     t: string;
@@ -43,25 +45,32 @@ export class TideData {
             const url = `https://tidesandcurrents.noaa.gov/api/datagetter?begin_date=${beginDateStr}&end_date=${endDateStr}&station=${station}&product=predictions&datum=MLLW&units=english&time_zone=lst_ldt&application=${application}&format=json`;
             this.logger.verbose(url);
             
-            try {
-                
+            try {           
+                const options: AxiosRequestConfig = {
+                    headers: {
+                        "Content-Encoding": "gzip"
+                    },
+                    timeout: 5000
+                };
+                await axios.get(url, options)
+                    .then((response: AxiosResponse) => {
+                        tideJson = response.data.predictions;
+                    })
+                    .catch((error: AxiosError) => {
+                        this.logger.warn(`TideData: GET error: ${error}`);
+                        tideJson = null;
+                    }); 
 
-                //this.logger.verbose("getTideData: Fetching today's tide data");
-                const response: AxiosResponse = await axios.get(url, {headers: {"Content-Encoding": "gzip"}, timeout: 5000});
-                tideJson = response.data.predictions;
-
-                if (tideJson !== undefined) {
+                if (tideJson !== undefined  && tideJson !== null) {
                     // create a date in the specified timezone for the end of day
                     const midnightTonight = moment().tz(timeZone).endOf("day");
 
                     // Key: station, Value: tideJson, expiration (seconds)
                     this.cache.set(station, tideJson, midnightTonight.valueOf() );
-                } else {
-                    tideJson = null;
-                }
+                } 
                 
             } catch(e) {
-                this.logger.warn(`TideData: Error getting tide data: ${e}`);
+                this.logger.warn(`TideData: Exception getting data: ${e}`);
                 tideJson = null;
             }
         }
