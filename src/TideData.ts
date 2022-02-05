@@ -1,9 +1,7 @@
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosResponse, AxiosRequestConfig, AxiosError } from "axios";
 import moment from "moment-timezone";  // https://momentjs.com/timezone/docs/ &  https://momentjs.com/docs/
 import { LoggerInterface } from "./Logger";
 import { KacheInterface } from "./Kache";
-import { AxiosRequestConfig } from "axios";
-import { AxiosError } from "axios";
 
 export interface Prediction {
     t: string;

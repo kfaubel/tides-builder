@@ -38,7 +38,7 @@ export class Kache implements KacheInterface {
   
                 this.cacheStorage = JSON.parse(cacheData.toString());
 
-                for (const [key, value] of Object.entries(this.cacheStorage)) {
+                for (const [key] of Object.entries(this.cacheStorage)) {
                     const cacheItem = this.cacheStorage[key];
         
                     if (cacheItem.expiration < new Date().getTime()) {

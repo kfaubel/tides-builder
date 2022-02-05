@@ -2,11 +2,20 @@ import { TideBuilder, TideStation } from "./TideBuilder";
 import { Logger } from "./Logger";
 import { Kache } from "./Kache";
 import { SimpleImageWriter } from "./SimpleImageWriter";
+import dotenv from "dotenv";
 
 async function run() {
+    dotenv.config();  // Load var from .env into the environment
+
     const logger: Logger = new Logger("tide-builder", "verbose"); 
     const cache: Kache = new Kache(logger, "tides-cache.json");
     const simpleImageWriter: SimpleImageWriter = new SimpleImageWriter(logger, ".");
+
+    const userAgent: string | undefined = process.env.USER_AGENT;
+    if (typeof userAgent !== "string" ) {
+        logger.error("USER_AGENT (email address) is not specified in the environment.  Set it in .env");
+        return;
+    }
    
     const tideBuilder: TideBuilder = new TideBuilder(logger, cache, simpleImageWriter);
     const tideStation: TideStation = {
@@ -14,7 +23,7 @@ async function run() {
         fileName: "onset-tides.jpg",
         location: "Onset, MA",
         timeZone: "America/New_York",
-        application: "ken@faubel.org",
+        application: userAgent,
     };
 
     await tideBuilder.CreateImages(tideStation);

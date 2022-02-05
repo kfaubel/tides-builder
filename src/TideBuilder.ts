@@ -10,7 +10,7 @@ export interface TideStation {
     fileName: string;       // "onset-tides.jpg";
     location: string;       // "Onset, MA";
     timeZone: string;       // "America/New_York"
-    application: string;    // "ken@faubel.org";
+    application: string;      // "name@domain.com";
 }
 
 export class TideBuilder {
