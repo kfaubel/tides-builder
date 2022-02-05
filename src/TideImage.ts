@@ -42,7 +42,7 @@ export class TideImage {
     }
 
     public async getImage(station: string, location: string, timeZone: string, application: string): Promise<ImageResult | null> {
-        this.logger.info(`TideImage: request for ${location}, station: ${station}`);
+        this.logger.verbose(`TideImage: request for ${location}, station: ${station}`);
 
         const title = `Tides at ${location}`;
         
@@ -62,7 +62,6 @@ export class TideImage {
         // }
 
         if (predictionsArray === null) {
-            this.logger.warn("TideImage: Failed to get data, can't create an image.\n");
             return null;
         }
 

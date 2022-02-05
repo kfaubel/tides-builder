@@ -61,8 +61,7 @@ export class TideData {
                 }
                 
             } catch(e) {
-                this.logger.error(`TideData: Error getting tide data: ${e}`);
-                this.logger.error(`TideData URL: ${url}`);
+                this.logger.warn(`TideData: Error getting tide data: ${e}`);
                 tideJson = null;
             }
         }

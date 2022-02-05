@@ -31,19 +31,14 @@ export class TideBuilder {
             const result = await tideImage.getImage(tideStation.station, tideStation.location, tideStation.timeZone, tideStation.application);
 
             if (result !== null && result.imageData !== null ) {
-                this.logger.info(`CreateImages: Writing: ${tideStation.fileName}`);
+                this.logger.info(`TideBuilder: Writing: ${tideStation.fileName}`);
                 this.writer.saveFile(tideStation.fileName, result.imageData.data);
             } else {
-                this.logger.error("CreateImages: No image returned from TideImage.getImage()");
+                this.logger.warn(`TideBuilder: No image for ${tideStation.fileName}`);
                 return false;
             }
         } catch(e) {
-            if (e instanceof Error) {
-                this.logger.error(`CreateImages: Exception: : ${e.message}`);
-                this.logger.error(`${e.stack}`);
-            } else {
-                this.logger.error(`CreateImages: Exception: : ${e}`);
-            }
+            this.logger.error(`TideBuilder: Exception: : ${e}`);
             return false;
         }
 
