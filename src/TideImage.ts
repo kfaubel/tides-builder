@@ -2,7 +2,6 @@
 import path from "path";
 import jpeg from "jpeg-js";
 import * as pure from "pureimage";
-import dateFormat from "dateformat";
 import { TideData } from "./TideData";
 import { LoggerInterface } from "./Logger";
 import { KacheInterface} from "./Kache";
@@ -193,7 +192,7 @@ export class TideImage {
         // Draw the date in the upper left
         const dataDate = new Date(predictionsArray[0].t);
         ctx.font = mediumFont;
-        ctx.fillText(dateFormat(dataDate, "mmm dS, yyyy"), dateX, dateY);
+        ctx.fillText(dataDate.toLocaleDateString(), dateX, dateY);
 
         // Draw the labels on the Y axis
         ctx.font = mediumFont;
